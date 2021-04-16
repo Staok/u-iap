@@ -136,21 +136,3 @@ APP程序可以按照以下的说明，由用户自行生成
 ​		User栏的After Build/Rebuild里面：
 ​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
 ​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
-
-
-
-
-
-
-
-如果觉得好用，使用时还请别忘加上本仓库的地址哦：https://github.com/Staok/stm32_framework
-
-```
-Author : Staok
-Email : superxhy@qq.com
-Repo : https://github.com/Staok/stm32_framework
-System is starting...
-...
-System init over!
-```
-
