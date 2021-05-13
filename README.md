@@ -2,7 +2,7 @@
 
 ```
 ___________________________________
-  欢迎来到 u-IAP   __   __     ____  
+  欢迎来到 u-IAP  __    __     ____  
    “瞰百易”计划   /    / |    /    )
 ----------------/----/__|---/____/-
   /   / ===    /    /   |  /       
@@ -13,7 +13,7 @@ _(___(______ _/_ __/____|_/________
 
 本项目的说明介绍等等部分遵循“二项玻”的第二则进行。本项目将在 [mcu_framework](https://github.com/Staok/stm32_framework) 项目的基础上进行，除了开源库之外的代码，每一行都经过手动移植、修改、检查和运行，是有灵魂的。喜欢的话，点个小star鸭~
 
-本文主体内容始写于2020.12。目前只有计划，只画了个大饼，还大概写好了菜谱，可行的路线都有，剩下的随缘；读研中比较忙，如果有人一块弄就太好了。
+本文主体内容始写于 2020.12。目前只有计划，只画了个大饼，还大概写好了菜谱，可行的路线都有，剩下的随缘；读研中比较忙，如果有人一块弄就太好了。
 
 ------
 
@@ -62,35 +62,41 @@ IAP，全称是“In-Application Programming”，中文解释为“在程序中
 
 -   安全考虑：
 
-    ​	防止陌生固件下载：下载之前用专有协议+非对称加密（MCU内部ID做密钥）握手，然后才可以接收数据
-    ​	防止已存固件篡改：对每个固件在第一次运行前进行一次硬件CRC校验并存下结果，在以后的启动运行固件前用硬件CRC进行一次固件校验
-    ​	防止固件被截获：对APP程序的.bin文件进行加密，传输到MCU中，MCU在下载之前进行解密（若MCU的FLASH能直接读出，那么这步白做）
+    ​	防止陌生固件下载：下载之前用专有协议+非对称加密（MCU内部ID做密钥）握手，然后才可以接收数据；
+    ​	防止已存固件篡改：对每个固件在第一次运行前进行一次硬件CRC校验并存下结果，在以后的启动运行固件前用硬件CRC进行一次固件校验；
+    ​	防止固件被截获：对APP程序的.bin文件进行加密，传输到MCU中，MCU在下载之前进行解密（若MCU的FLASH能直接读出，那么这步白做）。
 
 ### IAP程序的两种配置
 
 （注：最新的方案在IAP状态图.drawio文件中以状态图描述，按照这个来，下面的就仅供参考了）
 
 （即在IAP源工程选择编译并下载后，运行时不能改动的配置）
-	配置一：手动
-		1、IAP程序下载到MCU后，等待传入APP数据或者用户选择执行APP，可以选择的接收APP二进制文件的通讯接口有：
-		（注：以下是把APP二进制数据存入一个120KB的SRAM缓冲区，这个缓冲区定义在 0X20001000 地址，即APP程序在SRAM运行的地址）
-			1、串口x（x=1,2,3）（直接发文件，无需其他命令）接收数据，存入缓冲区
-			1.5、USB Device VCP 模拟串口接收数据，存入缓冲区
-			2、SDIO或者SPI驱动的SD卡，用FATFS扫描所有.bin文件并列出，读取SD卡内APP程序的.bin文件，存入缓冲区
-			3、USB HOST读取外部U盘，用FATFS扫描所有.bin文件并列出，读取U盘内APP程序的.bin文件，存入缓冲区；或者USB Device MSC把内部FLASH或者板载SPI FLASH模拟为U盘，在电脑端拖拽固件编程进去
-			4、无线模块接口（如蓝牙、WIFI或者LoRa，如果是串口模块，那么接收APP数据的就是串口）接收数据，存入缓冲区
-		2、APP程序传送到IAP程序的120KB缓冲区后，有三种选择：
-			（1）、SRAM运行，即直接跳转到APP程序在SRAM运行的地址
-			（2）、先把缓冲区的APP程序数据编程进MCU的FLASH（0x08010000），然后再跳转到APP程序在FLASH运行的地址
-			（3）、根据用户选择，把APP程序以.bin文件形式存入检测到的外部SPI FLASH或SD卡或U盘
-			FLASH不宜多次反复编程，建议可以先选择（1）在SRAM运行一下看看效果，如果可以固化下来再执行（2）或（3）
-			更不要一边接收一边编程FLASH，应该先在SRAM跑一下验证，之后再编程FLASH
-	配置二：自动（推荐）
-		1、IAP程序开机先检测是否要更新程序（可以是检测IO电平或者是通讯接口的一个命令等等）
-		2、如果没有要更新程序的命令，有以下选择
-			（1）、如果有外部存储设备，且其上存在APP程序的.bin文件，则读出放在定义在 0X20001000 地址的缓冲区，直接在SRAM运行程序，这种方法可以运行放在外部存储器件中的APP程序，上流，就是很耗SRAM，不计成本可以外接SRAM
-			（2）、如果没有外部存储设备，则查看MCU内部FLASH是否有APP程序文件，如果有则执行，如果没有，则进入"配置一：手动"序列等到用户手动控制存入APP数据
-		3、如果有要更新程序的命令，则进入"配置一：手动"序列等到用户手动控制存入APP数据
+
+#### 	配置一：手动
+
+1. IAP程序下载到MCU后，等待传入APP数据或者用户选择执行APP，可以选择的接收APP二进制文件的通讯接口有：
+
+   （注：以下是把APP二进制数据存入一个120KB的SRAM缓冲区，这个缓冲区定义在 0X20001000 地址，即APP程序在SRAM运行的地址）
+
+   1. 串口x（x=1,2,3）（直接发文件，无需其他命令）接收数据，存入缓冲区；
+   2. USB Device VCP 模拟串口接收数据，存入缓冲区；
+   3. SDIO或者SPI驱动的SD卡，用FATFS扫描所有.bin文件并列出，读取SD卡内APP程序的.bin文件，存入缓冲区；
+   4. USB HOST读取外部U盘，用FATFS扫描所有.bin文件并列出，读取U盘内APP程序的.bin文件，存入缓冲区；或者USB Device MSC把内部FLASH或者板载SPI FLASH模拟为U盘，在电脑端拖拽固件编程进去；
+   5. 无线模块接口（如蓝牙、WIFI或者LoRa，如果是串口模块，那么接收APP数据的就是串口）接收数据，存入缓冲区。
+
+2. APP程序传送到IAP程序的120KB缓冲区后，有三种选择：
+
+   1. SRAM运行，即直接跳转到APP程序在SRAM运行的地址；
+   2. 先把缓冲区的APP程序数据编程进MCU的FLASH（0x08010000），然后再跳转到APP程序在FLASH运行的地址；
+   3. 根据用户选择，把APP程序以.bin文件形式存入检测到的外部SPI FLASH或SD卡或U盘，FLASH不宜多次反复编程，建议可以先选择（1）在SRAM运行一下看看效果，如果可以固化下来再执行（2）或（3），更不要一边接收一边编程FLASH，应该先在SRAM跑一下验证，之后再编程FLASH。
+
+#### 配置二：自动（推荐）
+
+1. IAP程序开机先检测是否要更新程序（可以是检测IO电平或者是通讯接口的一个命令等等）；
+2. 如果没有要更新程序的命令，有以下选择：
+   1. 如果有外部存储设备，且其上存在APP程序的.bin文件，则读出放在定义在 0X20001000 地址的缓冲区，直接在SRAM运行程序，这种方法可以运行放在外部存储器件中的APP程序，上流，就是很耗SRAM，不计成本可以外接SRAM；
+   2. 如果没有外部存储设备，则查看MCU内部FLASH是否有APP程序文件，如果有则执行，如果没有，则进入"配置一：手动"序列等到用户手动控制存入APP数据。
+3. 如果有要更新程序的命令，则进入"配置一：手动"序列等到用户手动控制存入APP数据。
 
 ## 状态框图
 
@@ -98,41 +104,49 @@ IAP，全称是“In-Application Programming”，中文解释为“在程序中
 
 ## APP程序工程需要的设置
 
-APP程序可以按照以下的说明，由用户自行生成
+APP程序可以按照以下的说明，由用户自行生成。
 
 #### 	对于在FLASH运行
 
-​	1、在main主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
-​		SCB->VTOR = FLASH_BASE | 0x10000;	//0x10000为预留给IAP程序的FLASH空间
-​	2、MDK：
-​	在Options for Target里面：
-​		Target->Code Generation->勾选Use MicroLIB
-​		IROM1设置为：	Start：	0x8000000 + 预留给IAP程序的FLASH空间（例如0x10000（64KB），结果为0x8010000）
-​						Size：	FLASH总容量 - 预留给IAP程序的FLASH空间（以上面为例，结果为0xF0000）
-​						注：对于F407ZGTx（1MB的FLASH），可以给IAP留大一些，以便IAP包含USB、网络等体积较大的协议栈
-​		User栏的After Build/Rebuild里面：
-​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
-​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
+1. 在 main 主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
+
+   ```c
+   SCB->VTOR = FLASH_BASE | 0x10000;	//0x10000为预留给IAP程序的FLASH空间
+   ```
+
+2. MDK：
+   ​	在Options for Target里面：
+   ​		Target->Code Generation->勾选Use MicroLIB
+   ​		IROM1设置为：	Start：	0x8000000 + 预留给IAP程序的FLASH空间（例如0x10000（64KB），结果为0x8010000）
+   ​						Size：	FLASH总容量 - 预留给IAP程序的FLASH空间（以上面为例，结果为0xF0000）
+   ​						注：对于F407ZGTx（1MB的FLASH），可以给IAP留大一些，以便IAP包含USB、网络等体积较大的协议栈
+   ​		User栏的After Build/Rebuild里面：
+   ​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
+   ​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
 
 #### 对于在SRAM运行
 
-​	1、在main主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
-​		SCB->VTOR = SRAM_BASE | 0x1000;		//0x10000为预留给IAP程序的SRAM空间，即IAP程序最多所占的SRAM大小
-​	2、MDK：
-​	在Options for Target里面：
-​		Target->Code Generation->勾选Use MicroLIB
-​		（
-​		以128KB（0x20000）的SRAM为例，先分为预留给IAP程序的SRAM空间、用于程序空间和用于APP SRAM空间三部分，
-​		以下以预留给IAP程序的SRAM空间为4KB，100KB给程序空间，24KB给APP SRAM空间为例
-​		SRAM划分图示：
-​			|→ 4KB（0x1000）←||→ 100KB（0x19000）←||→24KB（0x6000）←|
-​			0x20000000······0x20001000·················0x2001A000········0x20020000
-​		）
-​		IROM1设置为：	Start：	0x20000000 + 预留给IAP程序的SRAM空间（例如0x1000（4KB），结果为0x20001000）
-​						Size：	SRAM总容量 - 预留给IAP程序的SRAM空间 - 给APP SRAM空间（以上面为例，结果为0x19000）
-​						注：对于F407ZGTx（1MB的FLASH），可以给IAP的SRAM留大一些（目前是4KB），以便IAP包含USB、网络等体积较大的协议栈
-​		IRAM1设置为：	Start：	以上面为例，结果为 0x2001A000
-​						Size：	以上面为例，结果为 0x6000
-​		User栏的After Build/Rebuild里面：
-​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
-​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
+1. 在main主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
+
+   ```c
+   SCB->VTOR = SRAM_BASE | 0x1000;		//0x10000为预留给IAP程序的SRAM空间，即IAP程序最多所占的SRAM大小
+   ```
+
+2. MDK：
+   ​	在Options for Target里面：
+   ​		Target->Code Generation->勾选Use MicroLIB
+   ​		（
+   ​		以128KB（0x20000）的SRAM为例，先分为预留给IAP程序的SRAM空间、用于程序空间和用于APP SRAM空间三部分，
+   ​		以下以预留给IAP程序的SRAM空间为4KB，100KB给程序空间，24KB给APP SRAM空间为例
+   ​		SRAM划分图示：
+   ​			|→ 4KB（0x1000）←||→ 100KB（0x19000）←||→24KB（0x6000）←|
+   ​			0x20000000······0x20001000·················0x2001A000········0x20020000
+   ​		）
+   ​		IROM1设置为：	Start：	0x20000000 + 预留给IAP程序的SRAM空间（例如0x1000（4KB），结果为0x20001000）
+   ​						Size：	SRAM总容量 - 预留给IAP程序的SRAM空间 - 给APP SRAM空间（以上面为例，结果为0x19000）
+   ​						注：对于F407ZGTx（1MB的FLASH），可以给IAP的SRAM留大一些（目前是4KB），以便IAP包含USB、网络等体积较大的协议栈
+   ​		IRAM1设置为：	Start：	以上面为例，结果为 0x2001A000
+   ​						Size：	以上面为例，结果为 0x6000
+   ​		User栏的After Build/Rebuild里面：
+   ​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
+   ​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
