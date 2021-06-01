@@ -49,16 +49,18 @@ IAP，全称是“In-Application Programming”，中文解释为“在程序中
 
 -   通过串口接收（USART 或 MCU Device VCP），均使用 y-modem 文件传输协议。
 
--   网络参考：
+- 网络参考：
 
-    -   实现——https://www.cnblogs.com/smulngy/p/5700283.html
-    -   介绍——https://blog.csdn.net/ZCShouCSDN/article/details/83793309
-    -   基于ymodem——https://blog.csdn.net/u010632165/article/details/103789247
-    -   方案参考——https://mp.weixin.qq.com/s/YWUSDmYeo3s2j1KfbTrVBA
-    -   官方总结大全，最后看——https://bbs.21ic.com/icview-2080934-1-1.html
-    -   开源bootloader，https://github.com/feaser/openblt
-    -   stm32-iap-uart-boot：https://github.com/havenxie/stm32-iap-uart-boot
-    -   ..
+  -   实现——https://www.cnblogs.com/smulngy/p/5700283.html
+  -   介绍——https://blog.csdn.net/ZCShouCSDN/article/details/83793309
+  -   基于ymodem——https://blog.csdn.net/u010632165/article/details/103789247
+  -   方案参考——https://mp.weixin.qq.com/s/YWUSDmYeo3s2j1KfbTrVBA
+  -   官方总结大全，最后看——https://bbs.21ic.com/icview-2080934-1-1.html
+  -   开源bootloader，https://github.com/feaser/openblt
+  -   stm32-iap-uart-boot：https://github.com/havenxie/stm32-iap-uart-boot
+  -   [nhivp/Awesome-Embedded: A curated list of awesome embedded programming. (github.com)](https://github.com/nhivp/Awesome-Embedded#stm32)
+  -   [nhivp/Awesome-Embedded: A curated list of awesome embedded programming. (github.com)](https://github.com/nhivp/Awesome-Embedded#bootloader)
+  -   ..
 
 -   安全考虑：
 
@@ -108,45 +110,64 @@ APP程序可以按照以下的说明，由用户自行生成。
 
 #### 	对于在FLASH运行
 
-1. 在 main 主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
+1. 在 main 主函数里面的最前面加上下面一句，设置中断向量表偏移量，以让 APP 程序的中断函数能够正确进入和返回：
 
    ```c
-   SCB->VTOR = FLASH_BASE | 0x10000;	//0x10000为预留给IAP程序的FLASH空间
+   SCB->VTOR = FLASH_BASE | 0x10000;	//0x10000（64KB） 为预留给 IAP 程序的 FLASH 空间
    ```
 
-2. MDK：
-   ​	在Options for Target里面：
-   ​		Target->Code Generation->勾选Use MicroLIB
-   ​		IROM1设置为：	Start：	0x8000000 + 预留给IAP程序的FLASH空间（例如0x10000（64KB），结果为0x8010000）
-   ​						Size：	FLASH总容量 - 预留给IAP程序的FLASH空间（以上面为例，结果为0xF0000）
-   ​						注：对于F407ZGTx（1MB的FLASH），可以给IAP留大一些，以便IAP包含USB、网络等体积较大的协议栈
-   ​		User栏的After Build/Rebuild里面：
-   ​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
-   ​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
+2. MDK 设置，在 Options for Target 里面：
+
+   1. Target 栏：
+
+      1. Code Generation -> 勾选 Use MicroLIB；
+
+      2. IROM1设置：
+
+         Start：`0x8000000 + 预留给IAP程序的 FLASH 空间（例如0x10000（64KB），结果为 0x8010000）`；
+
+         Size：`FLASH 总容量 - 预留给 IAP 程序的 FLASH 空间（以上面为例，结果为0xF0000）`；
+         *注：对于 F407ZGTx（1MB 的 FLASH），可以给 IAP 留大一些，以便 IAP 包含 USB、网络等体积较大的协议栈。*
+
+      3. IRAM1设置：保持不变，Start 为 内存起始地址，Size 为 MCU 的内存大小，都如实填写。
+
+   2. User 栏的 After Build/Rebuild 里面：勾选 Run #1，并在其右边栏里填入 `fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf`。这样在编译后会在 `.\Objects\` 里生成 APP 的 .bin 二进制文件，用于发送给 IAP 当作 APP 程序运行。`STM32F4DSP_HAL_freeRTOS_Framework.bin`为生成的 APP 二进制文件的名字，可自定，`STM32F4DSP_HAL_freeRTOS_Framework.axf`为工程名加`.axf`尾缀，`.axf`文件为 MDK 编译后生成的，利用它产生 APP 二进制文件，要填对路径。
 
 #### 对于在SRAM运行
 
-1. 在main主函数的开头设置中断向量表偏移量，以让APP程序的中断函数能够正确进入和返回：
+1. 在 main 主函数里面的最前面加上下面一句，设置中断向量表偏移量，以让 APP 程序的中断函数能够正确进入和返回：
 
    ```c
-   SCB->VTOR = SRAM_BASE | 0x1000;		//0x10000为预留给IAP程序的SRAM空间，即IAP程序最多所占的SRAM大小
+   SCB->VTOR = SRAM_BASE | 0x1000;		//0x10000（4KB） 为预留给 IAP 程序的 SRAM 空间，即 IAP 程序最多所占的 SRAM 大小
    ```
 
-2. MDK：
-   ​	在Options for Target里面：
-   ​		Target->Code Generation->勾选Use MicroLIB
-   ​		（
-   ​		以128KB（0x20000）的SRAM为例，先分为预留给IAP程序的SRAM空间、用于程序空间和用于APP SRAM空间三部分，
-   ​		以下以预留给IAP程序的SRAM空间为4KB，100KB给程序空间，24KB给APP SRAM空间为例
-   ​		SRAM划分图示：
-   ​			|→ 4KB（0x1000）←||→ 100KB（0x19000）←||→24KB（0x6000）←|
-   ​			0x20000000······0x20001000·················0x2001A000········0x20020000
-   ​		）
-   ​		IROM1设置为：	Start：	0x20000000 + 预留给IAP程序的SRAM空间（例如0x1000（4KB），结果为0x20001000）
-   ​						Size：	SRAM总容量 - 预留给IAP程序的SRAM空间 - 给APP SRAM空间（以上面为例，结果为0x19000）
-   ​						注：对于F407ZGTx（1MB的FLASH），可以给IAP的SRAM留大一些（目前是4KB），以便IAP包含USB、网络等体积较大的协议栈
-   ​		IRAM1设置为：	Start：	以上面为例，结果为 0x2001A000
-   ​						Size：	以上面为例，结果为 0x6000
-   ​		User栏的After Build/Rebuild里面：
-   ​						勾选 Run #1，并在其右边栏里填入 fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf
-   ​						这样在编译后会在.\Objects\里生成纯程序的.bin二进制文件，用于发送给IAP当作APP程序运行
+2. MDK 设置，在 Options for Target 里面：
+
+   1. Target 栏：
+
+      1. Code Generation -> 勾选 Use MicroLIB；
+
+      2. 给存储空间做个简单的划分计算：
+
+         以 128KB（0x20000）的 SRAM 为例，先分为 预留给 IAP 程序的 SRAM 空间、用于 APP 程序的空间 和 用于 APP RAM 的空间 三部分，以下示例，预留给 IAP 程序的 SRAM 空间为 4KB，100KB 给 APP 程序空间，24KB 给 APP RAM 的空间，则 SRAM 划分图示：
+
+         ```
+         |→    给 IAP 程序   ←||→      给 APP 程序      ←||→  给 APP 程序的 RAM ←|
+         |→   4KB（0x1000）  ←||→    100KB（0x19000）   ←||→   24KB（0x6000）  ←|
+         0x20000000······0x20001000·················0x2001A000········0x20020000
+         ```
+
+      3. IROM1设置为：
+
+         Start：`0x20000000 + 预留给 IAP 程序的 SRAM 空间（例如 0x1000（4KB），结果为 0x20001000）`，即 APP 程序 的起始地址；
+         Size：`SRAM 总容量 - 预留给 IAP 程序的 SRAM 空间 - 给 APP SRAM 空间（以上面为例，结果为 0x19000）`，即 APP 程序 的大小；
+         *注：对于 F407ZGTx（1MB 的 FLASH），可以给 IAP 的 SRAM 留大一些（目前是 4KB），以便 IAP 包含 USB、网络等体积较大的协议栈。*
+
+      4. IRAM1设置为：
+
+         Start：`以上面的计算为例，结果为 0x2001A000`，即 给 APP RAM 的空间的起始地址；
+
+         Size：`以上面的计算为例，结果为 0x6000`，即 给 APP RAM 的空间的大小。
+
+   2. User 栏的 After Build/Rebuild 里面：勾选 Run #1，并在其右边栏里填入 `fromelf.exe --bin -o  .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.bin .\Objects\STM32F4DSP_HAL_freeRTOS_Framework.axf`。这样在编译后会在 `.\Objects\` 里生成 APP 的 .bin 二进制文件，用于发送给 IAP 当作 APP 程序运行。
+
